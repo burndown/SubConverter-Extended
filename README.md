@@ -186,6 +186,10 @@ proxy_direct:false,https://example.com/sub
 # 对整个请求覆盖 Mihomo Provider 的直连策略
 &provider_proxy_direct=false
 
+# 让 target=clash 在服务端下载并解析订阅，把节点写入配置文件的 proxies，
+# 而不是生成 proxy-provider（仅 target=clash / clashr）
+&inline_nodes=true
+
 # 返回脱敏诊断报告，不返回配置文件
 &explain=true
 ```

@@ -2479,7 +2479,7 @@ RequestCostClass estimateConversionCost(const Request &request) {
       "include", "exclude", "rename", "emoji", "add_emoji",
       "remove_emoji", "append_type", "sort", "filter_deprecated",
       "udp", "tfo", "scv", "tls13", "group", "ruleprepend",
-      "ruleappend", "ruleset", "provider_headers"};
+      "ruleappend", "ruleset", "provider_headers", "inline_nodes"};
   bool transformation = false;
   for (const char *name : transform_parameters) {
     if (!getUrlArg(request.argument, name).empty()) {
@@ -3802,6 +3802,7 @@ struct ParsedSubRequest {
   tribool generate_classical_rule_provider;
   tribool tls13;
   tribool provider_proxy_direct;
+  tribool inline_nodes;
 };
 
 static std::string parseSubRequestArguments(Request &request,
@@ -3939,6 +3940,7 @@ static std::string parseSubRequestArguments(Request &request,
   parsed.tls13 = getUrlArg(argument, "tls13");
   parsed.provider_proxy_direct =
       getUrlArg(argument, "provider_proxy_direct");
+  parsed.inline_nodes = getUrlArg(argument, "inline_nodes");
   parsed.explain.upload_requested = parsed.upload.get(false);
   if (parsed.explain_mode && parsed.upload) {
     parsed.upload = false;
@@ -5328,6 +5330,12 @@ static SubStageResponse processSubscriptionNodes(
   if (ext.nodelist) {
     remote_mode = RemoteSubscriptionMode::ServerSideParse;
     remote_reason = "list-mode";
+  } else if (parsed.inline_nodes.get(false) &&
+             remote_mode == RemoteSubscriptionMode::ClashProxyProvider) {
+    // inline_nodes=true: download and parse the subscription on the server and
+    // write the nodes into the Clash config instead of a proxy-provider.
+    remote_mode = RemoteSubscriptionMode::ServerSideParse;
+    remote_reason = "inline-nodes";
   } else if (remote_mode == RemoteSubscriptionMode::QuanXServerRemote) {
     remote_reason = quanxRemoteCapabilityReason(parsed, policy, settings);
     if (remote_reason != "native-capable")
@@ -7387,7 +7395,8 @@ static std::string assembleSubResponse(
         "upload", "emoji", "add_emoji", "remove_emoji", "append_type",
         "tfo", "udp", "list", "sort", "sort_script", "script", "insert",
         "scv", "fdn", "expand", "append_info", "prepend", "classic",
-        "tls13", "provider_proxy_direct", "provider_headers", "explain",
+        "tls13", "provider_proxy_direct", "provider_headers", "inline_nodes",
+        "explain",
         "profile_data", "token"};
     for (const auto &arg : argument) {
       if (known_parameters.find(arg.first) != known_parameters.end())
